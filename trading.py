@@ -67,33 +67,76 @@ class Trading_Algorithm:
         plt.close()
 
     # Returns a list of the top up movers of the day 
-    def find_top_movers(self, direction='None'):
+    def find_top_movers(self):
         top_movers_list = rrm.get_top_movers()
         return_list = []
         for stock in top_movers_list:
             return_list.append(stock.get('symbol'))
         return return_list
 
+    # Implementation should be changed (layout of df is wrong) 
+    def find_top_movers_as_data_frame(self):
+        top_movers_list = rrm.get_top_movers()
+        top_movers_df = pd.DataFrame(top_movers_list)
+        top_movers_df = top_movers_df.T # Reorganizes 
+        # self.top_movers_df['ticker'] = self.top_movers_df.index # "Ticker" replaces index label 
+        # self.top_movers_df = self.top_movers_df.reset_index(drop=True) # Removes indexes - indexes = tickers
+        # cols = self.top_movers_df.columns.drop(['symbol']) # Classifies the columns 
+        # self.top_movers_df[cols] = self.top_movers_df[cols].apply(pd.to_numeric, errors='coerce') # Edits columns to be of type float64 
+        return top_movers_df
+
     # Returns a list of the top s&p500 up movers of the day 
     def find_top_movers_sp500(self):
         return rrm.get_top_movers_sp500(direction='up')
-
     
+    def Fibonacci_Retracements(self, ticker):
+        data = rrs.get_stock_historicals(ticker, interval='10minute', span='day') # data is a list of dictionaries
+        high = float(data[0]['high_price'])
+        low = float(data[0]['low_price'])
+        for index in data:
+            if float(index['high_price']) > high:
+                high = float(index['high_price'])
+            if float(index['low_price']) < low:
+                low = float(index['low_price'])
+        diff = high - low
+        levels = {
+            '100%': high,
+            '61.8%' : high - .618 * diff,
+            '50%' : high - .5 * diff,
+            '38.2%' : high - .382 * diff,
+            '23.6%' : high - .236 * diff,
+            '0%' : low
+        }
+
+        plt.figure(figsize=(10,6))
+        for index in data:
+            plt.plot(float(index['close_price']), label=f'{ticker} Price', color='blue')
+        for level in levels.values():
+            plt.axhline(level, linestyle='--', label=f'{level:.2f}')
+
+        plt.title(f'{ticker} Fibonacci Retracements')
+        plt.xlabel('Time')
+        plt.ylabel('Price')
+        # plt.legend()
+        plt.grid(True)
+        plt.savefig('results/fibonacci_retracements.png')
+        
+
+        
+
+
+####################### TESTING ################################
 
 # Create the Trading_Algorithm Object 
 algorithm = Trading_Algorithm()
-algorithm.build_portfolio()
-algorithm.create_stock_list_based_on_df()
-algorithm.create_stock_graph('NVDA')
-# print(algorithm.find_top_movers())
-# print(algorithm.find_top_movers_sp500)
+
+# algorithm.build_portfolio()
+# algorithm.create_stock_list_based_on_df()
+# algorithm.create_stock_graph('NVDA')
+algorithm.Fibonacci_Retracements('NVDA')
 
 
-# Make a list of the prices of the stocks
-# while(True):
-#     latest_price = rrs.get_latest_price(stock_list)
-#     print(latest_price)
-#     time.sleep(5)
+# algorithm.find_top_movers_as_data_frame()
 
 
 

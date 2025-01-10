@@ -1,2 +1,3 @@
 robinhood_env.sh
 venv/
+__pycache__
