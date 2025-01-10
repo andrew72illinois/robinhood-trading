@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib as mp
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
+import yfinance as yf
 
 class Trading_Algorithm:
     # Constructor
@@ -88,55 +89,81 @@ class Trading_Algorithm:
     # Returns a list of the top s&p500 up movers of the day 
     def find_top_movers_sp500(self):
         return rrm.get_top_movers_sp500(direction='up')
+        
+    # Using yfinance instead robin_stocks for data
+    # Implementing function to buy and sell stocks based on moving average crossover 
+    def moving_average_crossover(self, stock_name, execute_real=False):
+        timer = 0
+        while timer < 5: # Will execute over a period of 30 mins 
+            data = yf.download(stock_name, period='5d', interval='5m') # Get the data over the past 5 days and an interval of 5 minutes
+            data['SMA50'] = data['Close'].rolling(window=50).mean() # Add the close price over a window of 50
+            data['SMA200'] = data['Close'].rolling(window=200).mean() # Add the close price over a window of 200
+
+            signal = self.moving_average_signal(data) # Get the signal for buying and selling 
+            
+            # Buy and Sell based on the signal
+            if signal == 'BUY':
+                self.place_buy_order(stock_name, 1, execute_real)
+            elif signal == 'SELL':
+                self.place_sell_order(stock_name, 1, execute_real)
+
+            print(signal)
+            time.sleep(300) # Wait 5 minutes
+            timer += 1
+
+    # Helper function to get the signal - logic section
+    def moving_average_signal(self, data):
+        if data['SMA50'].iloc[-2] < data['SMA200'].iloc[-2] and data['SMA50'].iloc[-1] > data['SMA200'].iloc[-1]: 
+            return "BUY"  # Golden Cross (SMA50 crosses above SMA200)
+        elif data['SMA50'].iloc[-2] > data['SMA200'].iloc[-2] and data['SMA50'].iloc[-1] < data['SMA200'].iloc[-1]:
+            return "SELL"  # Death Cross (SMA50 crosses below SMA200)
+        else:
+            return "HOLD"  # No crossover
+
+    # Function to place an order, default is to not buy for real
+    def place_buy_order(self, stock, amount, real=False):
+        if real:
+            try: 
+                response = rr.orders.order_buy_market(stock, amount)
+                print(f"Bought {amount} shares of {stock}")
+                return response
+            except:
+                print("Error in Buying")
+                return None
+        else:
+            try:
+                response = float(rrs.get_latest_price(stock)) * amount
+                print(f"Theoretical: Bought {amount} shares of {stock}")
+                return response
+            except:
+                print("Theoretical: Error in Buying")
+                return None
     
-    def Fibonacci_Retracements(self, ticker):
-        data = rrs.get_stock_historicals(ticker, interval='10minute', span='day') # data is a list of dictionaries
-        high = float(data[0]['high_price'])
-        low = float(data[0]['low_price'])
-        for index in data:
-            if float(index['high_price']) > high:
-                high = float(index['high_price'])
-            if float(index['low_price']) < low:
-                low = float(index['low_price'])
-        diff = high - low
-        levels = {
-            '100%': high,
-            '61.8%' : high - .618 * diff,
-            '50%' : high - .5 * diff,
-            '38.2%' : high - .382 * diff,
-            '23.6%' : high - .236 * diff,
-            '0%' : low
-        }
-
-        plt.figure(figsize=(10,6))
-        for index in data:
-            plt.plot(float(index['close_price']), label=f'{ticker} Price', color='blue')
-        for level in levels.values():
-            plt.axhline(level, linestyle='--', label=f'{level:.2f}')
-
-        plt.title(f'{ticker} Fibonacci Retracements')
-        plt.xlabel('Time')
-        plt.ylabel('Price')
-        # plt.legend()
-        plt.grid(True)
-        plt.savefig('results/fibonacci_retracements.png')
+    # Function to place an order, default is to not sell for real
+    def place_sell_order(self, stock, amount, real=False):
+        if real:
+            try: 
+                response = rr.orders.order_sell_market(stock, amount)
+                print(f"Sold {amount} shares of {stock}")
+                return response
+            except:
+                print("Error in Selling")
+                return None
+        else:
+            try:
+                response = float(rrs.get_latest_price(stock)) * amount
+                print(f"Theoretical: Sold {amount} shares of {stock}")
+                return response
+            except:
+                print("Theoretical: Error in Selling")
+                return None
         
-
-        
-
 
 ####################### TESTING ################################
 
 # Create the Trading_Algorithm Object 
 algorithm = Trading_Algorithm()
-
-# algorithm.build_portfolio()
-# algorithm.create_stock_list_based_on_df()
-# algorithm.create_stock_graph('NVDA')
-algorithm.Fibonacci_Retracements('NVDA')
-
-
-# algorithm.find_top_movers_as_data_frame()
+algorithm.moving_average_crossover('AAPL', False)
 
 
 
