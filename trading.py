@@ -15,7 +15,9 @@ class Trading_Algorithm:
     # Constructor
     def __init__(self):
         self.robin_user = os.environ.get("robinhood_username")
+        print(self.robin_user)
         self.robin_pass = os.environ.get("robinhood_password")
+        print(self.robin_pass)
         self.robin_code = os.environ.get("robinhood_code") # 2fa code changes daily
         # Log into robinhood using robin_stocks.robinhood API
         self.login = rr.login(username=self.robin_user, password=self.robin_pass, mfa_code=self.robin_code) 
